@@ -2,33 +2,59 @@ import argparse
 import warnings
 
 import pandas as pd
-from colorama import Fore, Style, init
-from tqdm import tqdm
+from rich.console import Console
+from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
 
 warnings.filterwarnings(
-    "ignore", message="Workbook contains no default style, apply openpyxl's default"
+    "ignore",
+    message="Workbook contains no default style, apply openpyxl's default",
 )
 
-init(autoreset=True)  # Initialize colorama
+console = Console()
 
 
 def merge_xlsx(input_files, output_file):
+    # Variable to hold the DataFrames:
     dataframes = []
-    print(Fore.CYAN + "Merging Excel files...\n")
-    for idx, file in enumerate(tqdm(input_files, desc="Processing files", unit="file")):
-        print(
-            f"{Fore.YELLOW}[{idx+1}/{len(input_files)}]{Style.RESET_ALL} "
-            f"Reading {Fore.GREEN}{file}{Style.RESET_ALL}"
-        )
-        df = pd.read_excel(file)
-        dataframes.append(df)
+
+    # Message to indicate the start of the process:
+    console.print("[cyan]Merging Excel files...[/cyan]\n")
+
+    # Create a progress bar to show the merging process
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        "•",
+        TextColumn(
+            "[yellow]{task.completed}[/yellow]/[green]{task.total}[/green] files"
+        ),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+
+        # Initialize the progress bar task
+        task = progress.add_task("Processing files", total=len(input_files))
+
+        # Iterate through each input file and read it into a DataFrame
+        for idx, file in enumerate(input_files):
+            progress.console.print(
+                f"[yellow][{idx+1}/{len(input_files)}][/yellow] Reading [green]{file}[/green]"
+            )
+            df = pd.read_excel(file)
+            dataframes.append(df)
+            progress.update(task, advance=1)
+
+    # Message to indicate that the merging is in progress:
+    console.print(f"\n[cyan]Writing merged file to [green]{output_file}[/green][/cyan]")
+
+    # Merge all dataframes into one and save to output file
     merged_df = pd.concat(dataframes, ignore_index=True)
-    print(
-        Fore.CYAN
-        + f"\nWriting merged file to {Fore.GREEN}{output_file}{Style.RESET_ALL}"
-    )
     merged_df.to_excel(output_file, index=False)
-    print(Fore.GREEN + "Merge complete!" + Style.RESET_ALL)
+
+    # Success message after merging:
+    console.print("[green]Merge complete![/green]")
 
 
 def main():
@@ -36,7 +62,7 @@ def main():
     parser.add_argument(
         "input_files",
         nargs="+",
-        help="List of input Excel files to merge.",
+        help="List of input Excel files to merge (e.g., file1.xlsx file2.xlsx).",
     )
     parser.add_argument(
         "-o",
@@ -44,6 +70,8 @@ def main():
         required=True,
         help="Output file name for the merged Excel file.",
     )
+
+    # TODO: Add a little tip informing that user can use wildcards to select files (e.g., /path/to/directory/*.xlsx)
 
     args = parser.parse_args()
 
