@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 
 *.xlsx
+.DS_Store
