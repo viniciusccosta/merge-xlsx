@@ -72,6 +72,7 @@ def main():
     )
 
     # TODO: Add a little tip informing that user can use wildcards to select files (e.g., /path/to/directory/*.xlsx)
+    # TODO: Add option to plain/clear stdout instead of rich console with progress bar and etc.
 
     args = parser.parse_args()
 
